@@ -34,7 +34,8 @@ def Put(S , K , T , Si, r):
 
 st.title("Black-Scholes Pricing Model")
 
-st.sidebar.header("Black-Scholes Model")
+st.sidebar.markdown("<h1 style='color:white;'>Black-Scholes Model</h1>", unsafe_allow_html=True)
+st.sidebar.header("Made by Dhruv Jaiswal" , divider = "blue")
 S = st.sidebar.number_input("Stock Price [$]", min_value=1.0, value=100.0, step=1.0)
 K = st.sidebar.number_input("Strike Price [$]", min_value=1.0, value=100.0, step=1.0)
 T = st.sidebar.number_input("Time to Maturity [yrs]", min_value=0.01, value=1.0, step=0.01)
@@ -80,14 +81,12 @@ for i, v in enumerate(volatilities):
 call_purchase_price = st.number_input("Purchase Price for Call", value=10.0)
 put_purchase_price = st.number_input("Purchase Price for Put", value=10.0)
 
-# PnL calculation matrices
 call_pnl = call_prices - call_purchase_price
 put_pnl = put_prices - put_purchase_price
 
 call_pnl_df = pd.DataFrame(call_pnl, index=np.round(volatilities, 2), columns=np.round(spot_prices, 2))
 put_pnl_df = pd.DataFrame(put_pnl, index=np.round(volatilities, 2), columns=np.round(spot_prices, 2))
 
-# Create PnL heatmaps
 fig_pnl, axes_pnl = plt.subplots(1, 2, figsize=(14, 6))
 fig_pnl.patch.set_facecolor('#0E1117')
 
@@ -97,7 +96,6 @@ for ax in axes_pnl:
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_color('white')
 
-# Green = profit, Red = loss
 pnl_cmap = LinearSegmentedColormap.from_list("pnl_map", ["red", "black", "green"])
 
 t11 = sns.heatmap(call_pnl_df, ax=axes_pnl[0], cmap=pnl_cmap, annot=True, center=0, fmt=".0f")
@@ -165,7 +163,6 @@ axes[1].set_ylabel("Volatility")
 t1.collections[0].colorbar.ax.yaxis.set_tick_params(color='white')
 t2.collections[0].colorbar.ax.yaxis.set_tick_params(color='white')
 
-# If needed, also set the tick label text color
 for tick_label in t1.collections[0].colorbar.ax.get_yticklabels():
     tick_label.set_color('white')
 for tick_label in t2.collections[0].colorbar.ax.get_yticklabels():
