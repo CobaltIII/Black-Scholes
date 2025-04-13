@@ -12,10 +12,13 @@ from matplotlib.colors import LinearSegmentedColormap
 # Volatility = Sigma
 # Risk Free Interest Rate = r
 
-st.set_page_config(page_title="Black-Scholes Pricing Model", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Black-Scholes Pricing Model with greeks and PnL heatmaps", layout="wide", initial_sidebar_state="expanded")
 
 def N(x):
     return 0.5 * (1 + math.erf(x / (2 ** 0.5)))
+
+def N_prime(x):
+    return (1 / (2 * math.pi ** 0.5)) * math.e ** ((-x ** 2) / 2)
 
 def Call(S , K , T , Si, r):
     d1 = ((math.log(S / K)) + ((r + ((Si ** 2) / 2) * T))) / (Si * (T ** 0.5))
@@ -29,10 +32,29 @@ def Put(S , K , T , Si, r):
     
     return (K * (math.e ** (-r * T)) * N(-d2)) - (S * N(-d1))
 
+def greeks_call(S, K, T, Si, r):
+    d1 = ((math.log(S / K)) + ((r + ((Si ** 2) / 2) * T))) / (Si * (T ** 0.5))
+    d2 = d1 - (Si * (T ** 0.5))
+    delta = N(d1)
+    gamma = N_prime(d1) / (S * Si * (T ** 0.5))
+    vega = N_prime(d1) * S * (T ** 0.5)
+    theta = -((S * N_prime(d1) * Si) / (2 * (T ** 0.5))) - (r * K * (math.e ** (-r * T)) * N(d2))
+    rho = K * T * (math.e ** (-r * T)) * N(d2)
+    return delta, gamma, vega, theta, rho
 
+def greeks_put(S, K, T, Si, r):
+    d1 = ((math.log(S / K)) + ((r + ((Si ** 2) / 2) * T))) / (Si * (T ** 0.5))
+    d2 = d1 - (Si * (T ** 0.5))
+    delta0, gamma0, vega0, theta0, rho0 = greeks_call(S, K, T, Si, r)
+    delta = delta0 - 1
+    gamma = gamma0
+    vega = vega0
+    theta = -((S * N_prime(d1) * Si) / (2 * (T ** 0.5))) + (r * K * (math.e ** (-r * T)) * N(-d2))
+    rho = -K * T * (math.e ** (-r * T)) * N(-d2)
+    return delta, gamma, vega, theta, rho
 #####################################################################
 
-st.title("Black-Scholes Pricing Model")
+st.title("Black-Scholes Pricing Model with greeks and PnL heatmaps")
 
 st.sidebar.markdown("<h1 style='color:white;'>Black-Scholes Model</h1>", unsafe_allow_html=True)
 st.sidebar.header("Made by Dhruv Jaiswal" , divider = "blue")
@@ -50,6 +72,8 @@ max_sigma = st.sidebar.slider("Max Volatility for Heatmap", min_sigma, 1.0, 0.5,
 
 c = Call(S, K, T, sigma, r)
 p = Put(S, K, T, sigma, r)
+
+delta_c, gamma_c, vega_c, theta_c, rho_c = greeks_call(S, K, T, sigma, r)
 
 st.write("## Option Prices")
 
@@ -178,6 +202,85 @@ st.pyplot(fig)
 
 #####################################################################
 
+st.write("## Greeks for Call and Put Options")
+
+
+index, left, right = st.columns([2, 10, 10])
+
+with index:
+    st.latex(
+        """\\Delta = \\frac{\partial V}{\partial S}=""")
+    st.latex(
+        """\\gamma = \\frac{\\partial^2 V}{\\partial S^2}=""")
+    st.latex(
+        """\\nu = \\frac{\\partial V}{\\partial \\sigma}=""")
+    st.latex(
+        """\\theta = \\frac{\\partial V}{\\partial T}=""")
+    st.latex(
+        """\\rho = \\frac{\\partial V}{\\partial r}=""")
+    
+border_color = "rgba(0, 100, 0, 1.0)"
+green_rgba ="rgba(144, 238, 144, 0.8)"
+
+table_data_call = [f"Δ = {delta_c:.2f}",
+                   f"γ = {gamma_c:.2f}",
+                   f"ν = {vega_c:.2f}",
+                   f"θ = {theta_c:.2f}",
+                   f"ρ = {rho_c:.2f}"]
+
+with left:
+    st.markdown(
+        f"""
+        <div style="margin-top: 0px; display: flex; justify-content: center;">
+            <table style="
+                border: 2px solid {border_color};
+                border-radius: 10px;
+                background-color: {green_rgba};
+                width: 100%;
+                text-align: center;
+                font-family: 'Arial', sans-serif;
+                border-collapse: collapse;
+            ">
+                {"".join([f"<tr style='height: 72px; border-bottom: 2px solid {border_color};'><td style='vertical-align: middle; color: {border_color}; font-weight: bold; font-size: 24px;'>{row}</td></tr>" for row in table_data_call])}
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+border_color_r = "rgba(139, 0, 0, 1.0)"
+red_rgba ="rgba(255, 182, 193, 1.0)"
+
+delta_p, gamma_p, vega_p, theta_p, rho_p = greeks_put(S, K, T, sigma, r)
+table_data_put= [f"Δ = {delta_p:.2f}",
+                   f"γ = {gamma_p:.2f}",
+                   f"ν = {vega_p:.2f}",
+                   f"θ = {theta_p:.2f}",
+                   f"ρ = {rho_p:.2f}"]
+
+
+with right:
+    st.markdown(
+        f"""
+        <div style="margin-top: 0px; display: flex; justify-content: center;">
+            <table style="
+                border: 2px solid {border_color_r};
+                border-radius: 10px;
+                background-color: {red_rgba};
+                width: 100%;
+                text-align: center;
+                font-family: 'Arial', sans-serif;
+                border-collapse: collapse;
+            ">
+                {"".join([f"<tr style='height: 72px; border-bottom: 2px solid {border_color_r};'><td style='vertical-align: middle; color: {border_color_r}; font-weight: bold; font-size: 24px;'>{row}</td></tr>" for row in table_data_put])}
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+#####################################################################
+
 st.write("## Black Scholes Model")
 
 st.markdown("""
@@ -240,5 +343,18 @@ st.markdown("""
 This model provides a theoretical estimate for the fair price of options (assuming no arbitrage opportunities and a lognormal distribution of stock prices)
 """)
 
-#####################################################################
+st.markdown("""
+For the greeks given above, we can derive them in closed form after solving the equation. Their expressions are as follows - """)
 
+
+st.latex(
+        """\\Delta = \\frac{\partial V}{\partial S}""")
+st.latex(
+        """\\gamma = \\frac{\\partial^2 V}{\\partial S^2}""")
+st.latex(
+        """\\nu = \\frac{\\partial V}{\\partial \\sigma}""")
+st.latex(
+        """\\theta = \\frac{\\partial V}{\\partial T}""")
+st.latex(
+        """\\rho = \\frac{\\partial V}{\\partial r}""")
+#####################################################################
